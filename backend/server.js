@@ -3,82 +3,62 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
 const app = express();
-app.use(cors());
+
+// ✅ Middleware
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// ✅ Variables en mémoire (MVP)
 const SECRET = "secret";
-let sales = [];
 let users = [];
 let products = [];
-let id = 1;
+let sales = [];
+let productId = 1;
 
-// AUTH
+// =========================
+// ✅ AUTHENTIFICATION
+// =========================
+
+// REGISTER
 app.post("/auth/register", (req, res) => {
   const { username, password } = req.body;
+
+  const exist = users.find(u => u.username === username);
+  if (exist) {
+    return res.status(400).json({ error: "Utilisateur existe déjà" });
+  }
+
   users.push({ username, password });
-  res.json({ message: "User created" });
+
+  res.json({ message: "Compte créé" });
 });
 
+// LOGIN
 app.post("/auth/login", (req, res) => {
   const { username, password } = req.body;
-  const user = users.find(u => u.username === username && u.password === password);
 
-  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+  const user = users.find(
+    u => u.username === username && u.password === password
+  );
 
-  const token = jwt.sign({ username }, SECRET);
+  if (!user) {
+    return res.status(401).json({ error: "Identifiants invalides" });
+  }
+
+  const token = jwt.sign({ username }, SECRET, { expiresIn: "1d" });
+
   res.json({ token });
 });
 
-// Middleware
+// =========================
+// ✅ MIDDLEWARE AUTH
+// =========================
+
 function auth(req, res, next) {
   const header = req.headers.authorization;
+
   if (!header) return res.sendStatus(403);
 
   const token = header.split(" ")[1];
 
   try {
-    req.user = jwt.verify(token, SECRET);
-    next();
-  } catch {
-    res.sendStatus(403);
-  }
-}
-
-// PRODUCTS
-app.get("/products", auth, (req, res) => {
-  res.json(products);
-});
-
-app.post("/products", auth, (req, res) => {
-  const product = { id: id++, ...req.body };
-  products.push(product);
-  res.json(product);
-});
-
-// SALES
-app.post("/sales", auth, (req, res) => {
-  const { productId, qty } = req.body;
-  const product = products.find(p => p.id == productId);
-
-  if (!product || product.stock < qty) {
-    return res.status(400).json({ error: "Stock insuffisant" });
-  }
-
-  product.stock -= qty;
-  const amount = qty * product.price;
-
-  // ✅ Ajouter dans l’historique
-  sales.push({
-    product: product.name,
-    qty,
-    amount,
-    date: new Date()
-  });
-
-  res.json({ amount });
-});
- 
-
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
