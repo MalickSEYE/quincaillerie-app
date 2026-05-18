@@ -67,8 +67,17 @@ app.post("/sales", auth, (req, res) => {
   product.stock -= qty;
   const amount = qty * product.price;
 
+  // ✅ Ajouter dans l’historique
+  sales.push({
+    product: product.name,
+    qty,
+    amount,
+    date: new Date()
+  });
+
   res.json({ amount });
 });
+ 
 
 app.listen(3000, () => {
   console.log("Server running on port 3000");
