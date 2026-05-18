@@ -7,6 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 const SECRET = "secret";
+let sales = [];
 let users = [];
 let products = [];
 let id = 1;
